@@ -1,0 +1,262 @@
+<!-- Malibu 2021 ;) - Simple AJAX API styled product page for Bundles Native Shopify -->
+
+<style>
+  .hide_me_please {
+    display: none;
+  }
+
+  /* CSS GRID - For ease of usecases */
+  .desktop-viewport {
+    display: grid;
+    height: auto;
+    width: auto;
+    grid-template-columns: 1fr 1fr;
+    background-color: lightyellow;
+  }
+  
+  .product-image-viewer {
+    height: 400px;
+    width: auto;
+    margin: 15px; 
+    display: grid;
+    align-content: center;
+    justify-content: center;
+    background-color: lightblue;
+  }
+  
+  .product-choices-dropdown-section {
+    height: auto;
+    width: auto;
+    margin: 15px;
+    background-color: lightgreen;
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+  }
+  
+  .bundle-choices {
+    height: auto;
+    width: auto;
+  }
+  
+  .product-decription {
+    height: auto;
+    width: auto;
+    background-color: yellow;
+  }
+  
+  
+  /* Media Query for mobile viewport stuff */
+  
+  @media only screen and (max-width: 600px) {
+    .desktop-viewport {
+     display: grid;
+     height: auto;
+     width: auto;
+     grid-template-columns: 1fr;
+     background-color: lightyellow;
+    }
+    
+    .product-image-viewer {
+      height: 200px;
+      width: auto;
+      margin: 15px; 
+      display: grid;
+      align-content: center;
+      justify-content: center;
+      background-color: lightblue;
+    }
+    
+    .product-choices-dropdown-section {
+      height: auto;
+      width: auto;
+      margin: 15px;
+      background-color: lightgrey;
+      display: grid;
+      grid-template-rows: 1fr 1fr;
+    }
+    
+    .bundle-choices {
+      height: auto;
+      width: auto;
+    }
+  
+    .product-decription {
+      height: auto;
+      width: auto;
+      background-color: yellow;
+    }
+    
+  }
+  
+  /** Just ripped select styling for this example from internet **/
+  :root {
+    --radius: 2px;
+    --baseFg: dimgray;
+    --baseBg: white;
+    --accentFg: #006fc2;
+    --accentBg: #bae1ff;
+  }
+  
+  select {
+    font: 400 12px/1.3 sans-serif;
+    -webkit-appearance: none;
+    appearance: none;
+    color: var(--baseFg);
+    border: 1px solid var(--baseFg);
+    line-height: 1;
+    outline: 0;
+    padding: 0.65em 2.5em 0.55em 0.75em;
+    border-radius: var(--radius);
+    background-color: var(--baseBg);
+    background-image: linear-gradient(var(--baseFg), var(--baseFg)),
+    linear-gradient(-135deg, transparent 50%, var(--accentBg) 50%),
+    linear-gradient(-225deg, transparent 50%, var(--accentBg) 50%),
+    linear-gradient(var(--accentBg) 42%, var(--accentFg) 42%);
+    background-repeat: no-repeat, no-repeat, no-repeat, no-repeat;
+    background-size: 1px 100%, 20px 22px, 20px 22px, 20px 100%;
+    background-position: right 20px center, right bottom, right bottom, right bottom;   
+  }
+  
+  select:hover {
+    background-image: linear-gradient(var(--accentFg), var(--accentFg)),
+    linear-gradient(-135deg, transparent 50%, var(--accentFg) 50%),
+    linear-gradient(-225deg, transparent 50%, var(--accentFg) 50%),
+    linear-gradient(var(--accentFg) 42%, var(--accentBg) 42%);
+  }
+  
+  select:active {
+    background-image: linear-gradient(var(--accentFg), var(--accentFg)),
+    linear-gradient(-135deg, transparent 50%, var(--accentFg) 50%),
+    linear-gradient(-225deg, transparent 50%, var(--accentFg) 50%),
+    linear-gradient(var(--accentFg) 42%, var(--accentBg) 42%);
+    color: var(--accentBg);
+    border-color: var(--accentFg);
+    background-color: var(--accentFg);
+  }
+      
+  button {
+    background-color: #bae1ff;
+    border: solid 1px #006fc2;
+    color: #006fc2;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 12px;
+    margin: 4px 2px;
+    cursor: pointer;
+  }
+   
+  button:hover {
+    background-color: #006fc2;
+    color:white;
+    border: solid 1px white;
+  }
+
+</style>
+
+<!-- pull out navigation handles -->
+{% for tag in product.tags %}
+{% if tag contains "bundle_" %}
+  {% assign navlist = tag | split: "_" %}
+  {% assign masterlist = masterlist | append: navlist[1] | append: "," %}                      
+{% endif %}
+{% endfor %}
+{% assign masterlist = masterlist | split: "," %}  <!-- this gets us the number of choices for dynamic purposes -->
+{% assign masterlist = masterlist | reverse  %}    <!-- reverse the order as the initial array is LILO, so to follow order of how you set tags in product ADMIN will have this effect -->
+
+<div class="desktop-viewport">
+<!-- Left Side Desktop / Top Mobile -->
+  <div class="product-image-viewer">
+     <div class="the-product-image">## Bundle Image ##</div>
+  </div>
+<!-- Right Side Desktop / Bottom Mobile -->
+  <div class="product-choices-dropdown-section">
+    <div class="bundle-choices" id="bundle-choices">
+      <h3 style="padding-left: 10px;">Bundle Choices</h3>
+      <!-- jquery our selections in here ;) see script below or draw out with liquid code above.. testing idea -->
+        {% for choice in masterlist %}
+           <label style="padding-left: 10px;">{{choice | upcase | replace: "-", " "}}</label><br/>
+           <div class="selectContainer" style="padding-left: 10px;">
+           <select id="choice_{{forloop.index}}">  <!-- grabs index value of choices so I can easily find later with JS -->
+           {% for link in linklists[choice].links %}
+              {% if link.type == 'product_link' %} <!-- NOTE: I can find this because the product link is in the navigation types of choices, so its looking specific to product links. If nav has something else it won't show -->
+              {% assign productChoice = link.object %}
+                <!-- subchoice -->
+                <option id="option_{{productChoice.title}}" value="{{productChoice.variants[0].id}}">{{productChoice.title}}</option>  <!-- Grab out the ID, as the ID is used by the AJAX API -->
+                <!-- -->
+              {% endif %}
+           {% endfor %}
+          </select><br/>
+          </div>   
+        {% endfor %}
+    <br/>  
+    <button style="margin-left: 10px;" onclick="addMyBundlePlease('{{product.title}}');">Add To Cart</button>
+    <br/>  
+    </div>
+    <div class="product-decription" style="padding-left: 10px;">{{product.description}}</div>
+  </div>  
+</div>
+
+<!-- Gonna use AJAX API https://shopify.dev/api/ajax -->
+{{ '//ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js' | script_tag }}
+{{ 'api.jquery.js' | shopify_asset_url | script_tag }}
+
+<script>
+   // our array of items
+  Shopify.itemsToAdd = [];
+  
+  // function to add the items to the cart via the AJAX API
+  Shopify.addItemstoTheCart = function(){
+    
+    if (Shopify.itemsToAdd.length){
+       var item = Shopify.itemsToAdd.pop(); // start to pop items off the array to send to the API
+       $.ajax({
+         url: '/cart/add.js',
+         dataType: 'json',
+         type: 'post',
+         data: item,
+         success: Shopify.addItemstoTheCart, // so hit the callback to the function to process next array item
+         error: Shopify.addItemtoTheCart
+       });      
+    } else {
+      //redirect to the cart once done -- don't have too, but I do for this example
+      Shopify.itemsToAdd = []; //just make sure its cleared.
+      window.location.href = '/cart';
+    }
+  };
+  
+  
+  // function that builds the array of items from the product page once done is submitted to the AJAX Post function - eventlistener
+  function addMyBundlePlease(bundleReference){
+    
+    // Now lets take info from hidden list of variantIDs.
+    var tempArray = [];
+    $('select > option:selected').each(function(index){
+      console.log($(this).text());
+      tempArray.push($(this).val());
+    });
+    
+    // console.log(tempArray);
+    
+    Shopify.itemsToAdd.push( { id: tempArray[0], quantity: 1, properties: { bundleItem: ' ParentProduct-'+bundleReference+'' } } );
+    for (x = 1; x < tempArray.length; x++){
+      Shopify.itemsToAdd.push( { id: tempArray[x], quantity: 1, properties: { bundleItem: ' bundleItem-'+x+'-'+bundleReference+'' } } ); 
+    }
+    
+    
+    // Now that we have array call the function
+    if (Shopify.itemsToAdd.length){
+        console.log(Shopify.itemsToAdd);
+        Shopify.addItemstoTheCart();
+      
+    } else {
+      console.log('All items qtys are set to zero!'); // Thing is AJAX API needs valid qtys in order to add otherwise fails
+    }
+    
+    
+  };
+  
+</script>  
+
+ 
