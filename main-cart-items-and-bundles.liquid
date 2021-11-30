@@ -1,0 +1,148 @@
+{{ 'component-cart.css' | asset_url | stylesheet_tag }}
+{{ 'component-cart-items.css' | asset_url | stylesheet_tag }}
+{{ 'component-totals.css' | asset_url | stylesheet_tag }}
+{{ 'component-price.css' | asset_url | stylesheet_tag }}
+{{ 'component-discounts.css' | asset_url | stylesheet_tag }}
+{{ 'component-loading-overlay.css' | asset_url | stylesheet_tag }}
+
+<script src="{{ 'cart.js' | asset_url }}" defer="defer"></script>
+
+<style>
+  .cart-container{
+   background-color: lightgrey;
+   height: 500px;;
+   width: 100%;
+   margin: 5px;
+   border: 1px solid black; 
+  }
+  
+  .bundleMe{
+   display: grid;
+   grid-template-columns: .25fr 1fr .25fr;
+   background-color: lightyellow;
+   height: 200px; 
+   }
+  
+  .bundleImage img{
+    margin: 5px;
+  }
+
+  .bundleDealPrice{
+   margin-top: 5px; 
+  }
+  
+</style>  
+
+<cart-items class="page-width{% if cart == empty %} is-empty{% endif %}">
+<div class="cart-container">
+    {% for item in cart.items %}
+     {% unless item.properties['bundleItem'] contains 'bi' %}              <!-- so the line items are there but lets hide those properties that contain bi or bundle item -->
+         <!--{{item.title}} - {{item.key}} - {{item.properties | json}}<br/>  --> 
+         <div class="bundleMe">
+            <div class="bundleImage"><img src="{{item.product.images[0] | image_url: width: auto, height:190 }}"/></div>
+            <div class="bundleInfo">
+                <h4 style="font-weight: bold;">{{item.title}}</h4>
+                {% assign bundleItem = item.properties['bundleItem'] | split: "-" %} <!-- grab out unique property num -->
+                {% for item in cart.items %}
+                   {% unless item.properties['bundleItem'] contains 'pp' %}          <!-- do the opposite and hide the parent -->
+                      {% if item.properties['bundleItem'] contains bundleItem[1] %}  <!-- if has unique property num -->
+                         <div class="bundleItemsInfo">
+                            <img src="{{item.product.images[0] | image_url: width: auto, height:30 }}" style="float:left;"/><div>{{item.title}}</div><br/>
+                         </div>  
+                      {% endif %}
+                   {% endunless %} 
+                {% endfor %}
+            </div>
+            {% if item.properties['bundleItem'] contains 'pp' %}
+               {% assign bundleItemRemove = item.properties['bundleItem'] | split: "-" %}
+               <div class="bundleDealPrice">Bundle Deal! >> {{item.price | money}}<br/><div class="remove-bundle" style="color:blue;" onclick="removeBundle('{{bundleItemRemove[1]}}');">Remove</div></div>
+            {% else %}
+               <div class="bundleDealPrice" style="margin-left: 115px;">{{item.product.price | money}}</div>
+            {% endif %}
+         </div>  
+      {% endunless %}
+    {% endfor %}
+</div>  
+</cart-items>
+
+
+<div class="bottom">
+  <button id="wipe-cart" style="height: 40px; width: 50px; border: 1px solid black;">Clear Cart</button><br/>
+  <a href="https://www.freepik.com/vectors/food">Food vector created by freepik - www.freepik.com</a>
+</div>
+
+{% schema %}
+  {
+  "name": "Cart-Items-and-Bundles",
+  "settings": []
+}
+{% endschema %}
+
+<!-- Gonna use AJAX API https://shopify.dev/api/ajax -->
+{{ '//ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js' | script_tag }}
+{{ 'api.jquery.js' | shopify_asset_url | script_tag }}
+
+<script>
+  Shopify.Cart = Shopify.Cart || {};
+  Shopify.Cart.Queue = [];
+  
+  Shopify.Cart.RemoveBundle = function(){
+    var headers = new Headers({ 'Content-Type': 'application/json' });
+    if (Shopify.Cart.Queue.length){
+       var bItem = Shopify.Cart.Queue.shift();
+       var request = {
+         method: 'POST',
+         headers: headers,
+         body: JSON.stringify({ updates: { [bItem]:0 } })
+         };
+         fetch('/cart/update.js', request)
+         .then(function(){
+           if (Shopify.Cart.Queue.length){
+              Shopify.Cart.RemoveBundle();     
+           }else{
+              Shopify.Cart.Queue = [];
+              location.href = '/cart';
+           }
+        });
+    }
+  }
+  
+  
+  $('#wipe-cart').on('click', function(){
+    $.ajax({
+        type: "POST",
+        url: '/cart/clear.js',
+        data: '',
+        dataType: 'json',
+        success: function() { 
+            Shopify.clear();
+        },
+        error: function(XMLHttpRequest, textStatus) {
+          /* error code */
+        }
+      });
+      return false;
+  });
+  
+  function removeBundle(bundleKey){
+  // function to remove bundleKey Items ;)   
+  console.log(bundleKey);
+  // The other important thing to know here is the item.key will be used to help with removal
+  // Because the variant ID is shared with products that may not be in the bundle and be their own
+  // line item. We want to help distinguish which variants are to be removed when a removal of bundle is 
+  // chosen. :)  
+  var tempArray = [];
+  {% for item in cart.items %}
+    {% for key in item.properties %}
+      if (('{{key}}').includes(bundleKey)){
+         Shopify.Cart.Queue.push('{{item.key}}');
+      }
+    {% endfor %}               
+  {% endfor %}   
+  console.log(Shopify.Cart.Queue);
+                   
+  Shopify.Cart.RemoveBundle();
+  }
+  
+  
+</script>
